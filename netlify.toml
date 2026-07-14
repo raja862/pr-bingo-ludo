@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Serve index.html for any route (single-page app fallback)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

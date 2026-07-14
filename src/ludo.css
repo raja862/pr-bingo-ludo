@@ -1,0 +1,631 @@
+/* ---- Ludo Game Styles ---- */
+
+.ludo-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+  text-align: center;
+}
+
+.ludo-container.ludo-playing {
+  padding-top: 16px;
+  padding-bottom: 32px;
+}
+
+/* ---- Board ---- */
+.ludo-board-wrap {
+  max-width: 480px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+
+.ludo-board-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  overflow: visible;
+}
+
+/* ---- Tokens ---- */
+.ludo-token {
+  transition: cx 0.35s ease, cy 0.35s ease, r 0.15s ease;
+}
+
+.ludo-token-movable {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+}
+
+.ludo-token-selected {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+}
+
+.ludo-token-group.movable {
+  cursor: pointer;
+}
+
+/* Pulse animation for movable tokens */
+.ludo-token-pulse {
+  animation: ludo-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ludo-pulse {
+  0%, 100% { opacity: 0.3; r: 15; }
+  50% { opacity: 0.8; r: 18; }
+}
+
+/* Valid move destination highlight */
+.ludo-valid-dest {
+  animation: ludo-dest-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes ludo-dest-pulse {
+  0%, 100% { opacity: 0.4; stroke-width: 2; }
+  50% { opacity: 1; stroke-width: 4; }
+}
+
+/* ---- Dice ---- */
+.ludo-dice-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.ludo-dice {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  perspective: 400px;
+  cursor: default;
+}
+
+.ludo-dice-inner {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #2a3268, #1e2550);
+  border: 2px solid #4a5590;
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 12px;
+  gap: 3px;
+  position: relative;
+  z-index: 2;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ludo-dice-shadow {
+  position: absolute;
+  bottom: -4px;
+  left: 10%;
+  width: 80%;
+  height: 12px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 1;
+  transition: all 0.15s ease;
+}
+
+/* Rolling animation — shake + scale cycle */
+.ludo-dice.rolling .ludo-dice-inner {
+  animation: ludo-dice-roll 0.12s ease-in-out infinite alternate;
+  border-color: var(--accent);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(255, 209, 102, 0.3);
+}
+
+.ludo-dice.rolling .ludo-dice-shadow {
+  animation: ludo-shadow-roll 0.12s ease-in-out infinite alternate;
+}
+
+@keyframes ludo-dice-roll {
+  0% { transform: rotate(-12deg) scale(1.05) translateY(-6px); }
+  100% { transform: rotate(12deg) scale(0.95) translateY(2px); }
+}
+
+@keyframes ludo-shadow-roll {
+  0% { opacity: 0.3; transform: scale(0.7); }
+  100% { opacity: 0.6; transform: scale(1.1); }
+}
+
+/* Landed — bounce in */
+.ludo-dice.landed .ludo-dice-inner {
+  animation: ludo-dice-land 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ludo-dice.landed .ludo-dice-shadow {
+  animation: ludo-shadow-land 0.5s ease;
+}
+
+@keyframes ludo-dice-land {
+  0% { transform: scale(0.8) translateY(-20px) rotate(-15deg); }
+  40% { transform: scale(1.12) translateY(2px) rotate(3deg); }
+  60% { transform: scale(0.96) translateY(-2px) rotate(-1deg); }
+  80% { transform: scale(1.03) translateY(0) rotate(0deg); }
+  100% { transform: scale(1) translateY(0) rotate(0deg); }
+}
+
+@keyframes ludo-shadow-land {
+  0% { opacity: 0.1; transform: scale(0.4); }
+  40% { opacity: 0.7; transform: scale(1.2); }
+  100% { opacity: 0.5; transform: scale(1); }
+}
+
+/* Rolled a 6 — golden glow */
+.ludo-dice.six .ludo-dice-inner {
+  border-color: var(--accent);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 0 24px rgba(255, 209, 102, 0.5),
+    0 0 48px rgba(255, 209, 102, 0.2);
+}
+
+.ludo-dice.six .ludo-dice-dot:not(.empty) {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(255, 209, 102, 0.6);
+}
+
+/* Dots */
+.ludo-dice-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #e0e4ff;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.1);
+  transition: background 0.08s ease;
+}
+
+.ludo-dice-dot.empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Roll button */
+.ludo-roll-btn {
+  padding: 12px 32px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), #ffb703);
+  color: #2a1a00;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 20px rgba(255, 183, 3, 0.4);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.ludo-roll-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 26px rgba(255, 183, 3, 0.5); }
+.ludo-roll-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.ludo-roll-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+.ludo-dice-label {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ludo-extra-turn {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 8px;
+  background: rgba(22, 199, 132, 0.2);
+  color: var(--win);
+  font-size: 13px;
+  font-weight: 700;
+  animation: ludo-fade-in 0.3s ease;
+}
+
+/* ---- Turn / Status ---- */
+.ludo-turn-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 24px;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.ludo-whose-turn { font-weight: 700; }
+.ludo-whose-turn.p1 { color: #4ff0b7; }
+.ludo-whose-turn.p2 { color: var(--accent); }
+.ludo-whose-turn.p3 { color: var(--p1-2); }
+.ludo-whose-turn.p4 { color: var(--p2-2); }
+
+.ludo-auto-pass {
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+  animation: ludo-fade-in 0.3s ease;
+}
+
+@keyframes ludo-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Player tabs for Ludo ---- */
+.ludo-player-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.ludo-player-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 2px solid #3a4380;
+  background: var(--cell);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.ludo-player-tab.active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ludo-player-tab.p1.active { border-color: #16c784; background: rgba(22, 199, 132, 0.15); color: #4ff0b7; }
+.ludo-player-tab.p2.active { border-color: #ffd166; background: rgba(255, 209, 102, 0.15); color: #ffd166; }
+.ludo-player-tab.p3.active { border-color: #4d8bff; background: rgba(77, 139, 255, 0.15); color: #8fb8ff; }
+.ludo-player-tab.p4.active { border-color: #ff4d6d; background: rgba(255, 77, 109, 0.15); color: #ff8fa3; }
+
+.ludo-player-tab.me { font-weight: 800; }
+
+.ludo-tab-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ludo-tab-dot.p1 { background: #16c784; }
+.ludo-tab-dot.p2 { background: #ffd166; }
+.ludo-tab-dot.p3 { background: #4d8bff; }
+.ludo-tab-dot.p4 { background: #ff4d6d; }
+
+.ludo-tab-home {
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ---- Move log ---- */
+.ludo-move-log {
+  margin-top: 16px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--bg-2);
+  border: 1px solid #3a4380;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ludo-move-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #3a4380;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ludo-move-log-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.ludo-move-log-close:hover { color: var(--text); background: var(--cell); }
+
+.ludo-move-log-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.ludo-move-log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ludo-move-log-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ludo-move-log-dot.p1 { background: #16c784; }
+.ludo-move-log-dot.p2 { background: #ffd166; }
+.ludo-move-log-dot.p3 { background: #4d8bff; }
+.ludo-move-log-dot.p4 { background: #ff4d6d; }
+
+.ludo-move-log-text {
+  flex: 1;
+  text-align: left;
+}
+
+.ludo-move-log-empty {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+}
+
+/* ---- Win overlay ---- */
+.ludo-win-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 24, 0.72);
+  display: grid;
+  place-items: center;
+  animation: fade 0.3s ease;
+  z-index: 10;
+}
+
+.ludo-win-card {
+  background: linear-gradient(160deg, var(--bg-2), var(--cell));
+  border: 1px solid #3a4380;
+  border-radius: 20px;
+  padding: 40px 48px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  animation: pop 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  position: relative;
+  z-index: 12;
+  text-align: center;
+}
+
+.ludo-win-title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--marked-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ludo-win-text {
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.ludo-win-sub {
+  color: var(--muted);
+  margin: 10px 0 22px;
+  font-size: 15px;
+}
+
+.ludo-win-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ---- Capture animation ---- */
+.ludo-capture-flash {
+  animation: ludo-capture 0.5s ease;
+}
+
+@keyframes ludo-capture {
+  0% { opacity: 1; r: 12; }
+  50% { opacity: 0.3; r: 20; }
+  100% { opacity: 1; r: 12; }
+}
+
+/* ---- Game selection button ---- */
+.ludo-btn {
+  background: linear-gradient(135deg, #16c784, #4ff0b7);
+  color: #042e1a;
+  box-shadow: 0 6px 18px rgba(22, 199, 132, 0.35);
+}
+
+/* ---- Game selection screen ---- */
+.game-select-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game-select-card {
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  padding: 28px 20px;
+  border-radius: 16px;
+  border: 2px solid #3a4380;
+  background: var(--cell);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-select-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.game-select-card.bingo:hover {
+  border-color: var(--accent);
+}
+.game-select-card.ludo:hover {
+  border-color: #16c784;
+}
+
+.game-select-icon {
+  font-size: 48px;
+}
+
+.game-select-name {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.game-select-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ---- Back to games button ---- */
+.back-to-games {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #3a4380;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 8px;
+}
+.back-to-games:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ===============================
+   RESPONSIVE STYLES
+   =============================== */
+
+@media (max-width: 768px) {
+  .ludo-container {
+    padding: 20px 12px 48px;
+  }
+  .ludo-board-wrap {
+    max-width: 100%;
+  }
+  .ludo-win-card {
+    padding: 32px 28px;
+    margin: 0 16px;
+    max-width: calc(100vw - 32px);
+  }
+  .ludo-win-title { font-size: 40px; }
+  .ludo-win-text { font-size: 20px; }
+  .game-select-card {
+    min-width: 140px;
+    padding: 22px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ludo-container {
+    padding: 12px 8px 40px;
+  }
+  .ludo-container.ludo-playing {
+    padding-top: 10px;
+    padding-bottom: 20px;
+  }
+  .ludo-dice {
+    width: 64px;
+    height: 64px;
+  }
+  .ludo-dice-inner {
+    padding: 9px;
+    border-radius: 13px;
+  }
+  .ludo-roll-btn { padding: 8px 22px; font-size: 14px; }
+  .ludo-dice-label { font-size: 12px; }
+
+  .ludo-player-tabs { gap: 6px; margin-bottom: 10px; }
+  .ludo-player-tab { padding: 4px 10px; font-size: 12px; gap: 6px; border-radius: 8px; }
+  .ludo-tab-home { min-width: 18px; height: 18px; font-size: 10px; border-radius: 5px; }
+
+  .ludo-turn-status { font-size: 13px; gap: 8px; margin-bottom: 10px; }
+  .ludo-extra-turn { font-size: 11px; padding: 3px 10px; }
+  .ludo-auto-pass { font-size: 12px; }
+
+  .ludo-win-card {
+    padding: 24px 20px;
+    margin: 0 12px;
+    max-width: calc(100vw - 24px);
+  }
+  .ludo-win-title { font-size: 32px; letter-spacing: 2px; }
+  .ludo-win-text { font-size: 18px; }
+  .ludo-win-sub { font-size: 13px; margin: 8px 0 16px; }
+
+  .ludo-move-log { border-radius: 12px; }
+  .ludo-move-log-header { padding: 8px 14px; font-size: 13px; }
+  .ludo-move-log-list { max-height: 140px; }
+  .ludo-move-log-item { padding: 3px 14px; font-size: 12px; }
+
+  .game-select-grid { gap: 10px; }
+  .game-select-card {
+    min-width: 120px;
+    padding: 18px 14px;
+    border-radius: 12px;
+    gap: 8px;
+  }
+  .game-select-icon { font-size: 36px; }
+  .game-select-name { font-size: 16px; }
+  .game-select-desc { font-size: 11px; }
+}
+
+@media (max-width: 360px) {
+  .ludo-dice { width: 54px; height: 54px; }
+  .ludo-dice-inner { padding: 7px; border-radius: 11px; }
+  .ludo-player-tab { padding: 3px 8px; font-size: 11px; }
+  .ludo-win-title { font-size: 28px; }
+  .ludo-win-text { font-size: 16px; }
+  .ludo-win-card { padding: 20px 16px; }
+  .game-select-card { min-width: 100px; padding: 14px 10px; }
+  .game-select-icon { font-size: 30px; }
+  .game-select-name { font-size: 14px; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .ludo-container { padding: 8px 16px 24px; }
+  .ludo-container.ludo-playing { padding-top: 6px; }
+  .ludo-board-wrap { max-width: 340px; }
+  .ludo-player-tabs { margin-bottom: 6px; }
+  .ludo-turn-status { margin-bottom: 6px; font-size: 12px; }
+  .ludo-dice { width: 48px; height: 48px; }
+  .ludo-dice-inner { padding: 6px; border-radius: 10px; }
+  .ludo-dice-area { gap: 6px; margin-bottom: 8px; }
+}
