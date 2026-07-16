@@ -28,6 +28,16 @@ const DICE_FACES = {
   6: [1,0,1, 1,0,1, 1,0,1],
 }
 
+// 3D cube: rotation to bring each face to the front
+const FACE_ROTATIONS = {
+  1: 'rotateX(0deg) rotateY(0deg)',
+  2: 'rotateX(-90deg) rotateY(0deg)',
+  3: 'rotateX(0deg) rotateY(-90deg)',
+  4: 'rotateX(0deg) rotateY(90deg)',
+  5: 'rotateX(90deg) rotateY(0deg)',
+  6: 'rotateX(180deg) rotateY(0deg)',
+}
+
 export default function LudoGame({ onBack }) {
   const [mode, setMode] = useState(null) // null | 'offline' | 'online'
   const [phase, setPhase] = useState('setup') // setup | setup-offline | online-choice | create-room | join-room | lobby | playing
@@ -178,6 +188,25 @@ export default function LudoGame({ onBack }) {
       setPhase('playing')
     }
   }, [isOnline, phase, online.onlineStatus])
+
+  // Auto-resume: when Ludo hook reconnects, transition UI to the correct phase
+  useEffect(() => {
+    if (mode === null && online.roomCode && online.mySlot && online.roomData) {
+      setMode('online')
+      if (online.onlineStatus === 'playing') {
+        setPhase('playing')
+      } else if (online.onlineStatus === 'waiting') {
+        setPhase('lobby')
+      }
+    }
+  }, [mode, online.roomCode, online.mySlot, online.roomData, online.onlineStatus])
+
+  // Restore player name from reconnected room data
+  useEffect(() => {
+    if (online.roomCode && online.mySlot && online.onlinePlayers[online.mySlot]?.name && !myName) {
+      setMyName(online.onlinePlayers[online.mySlot].name)
+    }
+  }, [online.roomCode, online.mySlot, online.onlinePlayers, myName])
 
   // Chat scroll
   useEffect(() => {
@@ -495,20 +524,28 @@ export default function LudoGame({ onBack }) {
     }))
   }, [winner])
 
-  // Render dice dots
+  // Render 3D dice cube
   const renderDice = (value) => {
     if (!value) return null
-    const showValue = diceRolling ? diceDisplay : value
-    const dots = DICE_FACES[showValue] || DICE_FACES[1]
+    const showValue = value
     const isSix = !diceRolling && diceLanded && showValue === 6
     return (
-      <div className={`ludo-dice ${diceRolling ? 'rolling' : ''} ${diceLanded ? 'landed' : ''} ${isSix ? 'six' : ''}`}>
-        <div className="ludo-dice-inner">
-          {dots.map((filled, i) => (
-            <span key={i} className={`ludo-dice-dot ${filled ? '' : 'empty'}`} />
+      <div className={`ludo-dice-3d ${diceRolling ? 'rolling' : ''} ${diceLanded ? 'landed' : ''} ${isSix ? 'six' : ''}`}>
+        <div
+          className="ludo-dice-cube"
+          style={!diceRolling ? { transform: FACE_ROTATIONS[showValue] } : undefined}
+        >
+          {[1, 2, 3, 4, 5, 6].map((face) => (
+            <div key={face} className={`ludo-dice-face face-${face}`}>
+              <div className="ludo-dice-face-dots">
+                {DICE_FACES[face].map((filled, i) => (
+                  <span key={i} className={`ludo-dice-dot ${filled ? '' : 'empty'}`} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
-        <div className="ludo-dice-shadow" />
+        <div className="ludo-dice-shadow-3d" />
       </div>
     )
   }
