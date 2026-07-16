@@ -94,20 +94,67 @@ export function useSounds() {
     if (mutedRef.current) return
     try {
       const ctx = getCtx()
-      const bufferSize = ctx.sampleRate * 0.08
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-      const data = buffer.getChannelData(0)
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize)
+      const now = ctx.currentTime
+
+      // Rattle: series of short surface impacts (dice tumbling)
+      const clickCount = 6 + Math.floor(Math.random() * 3)
+      for (let i = 0; i < clickCount; i++) {
+        const t = now + i * 0.065 + Math.random() * 0.02
+        const vol = 0.07 * (1 - i * 0.07) + 0.015
+
+        const len = Math.floor(ctx.sampleRate * (0.012 + Math.random() * 0.008))
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+        const d = buf.getChannelData(0)
+        for (let j = 0; j < len; j++) {
+          d[j] = (Math.random() * 2 - 1) * (1 - j / len)
+        }
+        const src = ctx.createBufferSource()
+        src.buffer = buf
+
+        const filter = ctx.createBiquadFilter()
+        filter.type = 'highpass'
+        filter.frequency.value = 1500 + Math.random() * 2500
+        filter.Q.value = 0.8
+
+        const gain = ctx.createGain()
+        gain.gain.setValueAtTime(vol, t)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02)
+
+        src.connect(filter)
+        filter.connect(gain)
+        gain.connect(ctx.destination)
+        src.start(t)
       }
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
-      const gain = ctx.createGain()
-      gain.gain.setValueAtTime(0.12, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08)
-      source.connect(gain)
-      gain.connect(ctx.destination)
-      source.start(ctx.currentTime)
+
+      // Landing thud: low-frequency impact
+      const landTime = now + clickCount * 0.065 + 0.06
+      const thud = ctx.createOscillator()
+      const thudGain = ctx.createGain()
+      thud.type = 'sine'
+      thud.frequency.setValueAtTime(120, landTime)
+      thud.frequency.exponentialRampToValueAtTime(45, landTime + 0.12)
+      thudGain.gain.setValueAtTime(0.1, landTime)
+      thudGain.gain.exponentialRampToValueAtTime(0.001, landTime + 0.15)
+      thud.connect(thudGain)
+      thudGain.connect(ctx.destination)
+      thud.start(landTime)
+      thud.stop(landTime + 0.15)
+
+      // Landing noise burst
+      const landLen = Math.floor(ctx.sampleRate * 0.035)
+      const landBuf = ctx.createBuffer(1, landLen, ctx.sampleRate)
+      const landData = landBuf.getChannelData(0)
+      for (let j = 0; j < landLen; j++) {
+        landData[j] = (Math.random() * 2 - 1) * (1 - j / landLen) * 0.5
+      }
+      const landSrc = ctx.createBufferSource()
+      landSrc.buffer = landBuf
+      const landGain = ctx.createGain()
+      landGain.gain.setValueAtTime(0.09, landTime)
+      landGain.gain.exponentialRampToValueAtTime(0.001, landTime + 0.06)
+      landSrc.connect(landGain)
+      landGain.connect(ctx.destination)
+      landSrc.start(landTime)
     } catch {
       // Audio not available
     }

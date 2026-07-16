@@ -13,10 +13,10 @@ function generateRoomCode() {
 }
 
 function getPlayerId() {
-  let id = sessionStorage.getItem('bingo_player_id')
+  let id = localStorage.getItem('bingo_player_id')
   if (!id) {
     id = crypto.randomUUID()
-    sessionStorage.setItem('bingo_player_id', id)
+    localStorage.setItem('bingo_player_id', id)
   }
   return id
 }
@@ -63,8 +63,8 @@ export function useOnlineGame() {
 
   // Attempt to reconnect from sessionStorage on mount
   useEffect(() => {
-    const savedCode = sessionStorage.getItem('bingo_room_code')
-    const savedSlot = sessionStorage.getItem('bingo_room_slot')
+    const savedCode = localStorage.getItem('bingo_room_code')
+    const savedSlot = localStorage.getItem('bingo_room_slot')
     if (savedCode && savedSlot) {
       reconnect(savedCode, Number(savedSlot))
     }
@@ -142,8 +142,8 @@ export function useOnlineGame() {
 
     // Persist for reconnection (only for players, not spectators)
     if (!spectator) {
-      sessionStorage.setItem('bingo_room_code', code)
-      sessionStorage.setItem('bingo_room_slot', String(slot))
+      localStorage.setItem('bingo_room_code', code)
+      localStorage.setItem('bingo_room_slot', String(slot))
     }
   }, [cleanup])
 
@@ -216,20 +216,14 @@ export function useOnlineGame() {
         setError('Room not found')
         return false
       }
-      if (data.status === 'playing') {
-        setError('Game already in progress')
-        return false
-      }
-      if (data.status === 'finished') {
-        setError('Game has ended')
-        return false
-      }
 
       const players = data.players || {}
 
-      // Check if already in room
+      // Check if already in room (by player ID) — allow rejoin regardless of game status
       for (const [slot, p] of Object.entries(players)) {
         if (p.id === id) {
+          const updatedPlayers = { ...players, [slot]: { ...p, name: name || p.name, avatar: avatar || p.avatar, connected: true } }
+          await supabase.from('rooms').update({ players: updatedPlayers }).eq('code', code)
           setRoomCode(code)
           setMySlot(Number(slot))
           setIsHost(data.host === id)
@@ -237,6 +231,16 @@ export function useOnlineGame() {
           subscribeToRoom(code, Number(slot))
           return true
         }
+      }
+
+      // New player — block if game already started or ended
+      if (data.status === 'playing') {
+        setError('Game already in progress')
+        return false
+      }
+      if (data.status === 'finished') {
+        setError('Game has ended')
+        return false
       }
 
       // Find open slot
@@ -316,17 +320,28 @@ export function useOnlineGame() {
         .single()
 
       if (err || !data) {
-        sessionStorage.removeItem('bingo_room_code')
-        sessionStorage.removeItem('bingo_room_slot')
+        localStorage.removeItem('bingo_room_code')
+        localStorage.removeItem('bingo_room_slot')
+        return
+      }
+
+      if (data.status === 'finished') {
+        localStorage.removeItem('bingo_room_code')
+        localStorage.removeItem('bingo_room_slot')
         return
       }
 
       const player = data.players?.[slot]
       if (!player || player.id !== playerId.current) {
-        sessionStorage.removeItem('bingo_room_code')
-        sessionStorage.removeItem('bingo_room_slot')
+        localStorage.removeItem('bingo_room_code')
+        localStorage.removeItem('bingo_room_slot')
         return
       }
+
+      // Mark as connected on rejoin
+      const supabase2 = getSupabase()
+      const updatedPlayers = { ...data.players, [slot]: { ...player, connected: true } }
+      await supabase2.from('rooms').update({ players: updatedPlayers }).eq('code', code)
 
       setRoomCode(code)
       setMySlot(slot)
@@ -334,8 +349,8 @@ export function useOnlineGame() {
       setIsSpectator(false)
       subscribeToRoom(code, slot)
     } catch {
-      sessionStorage.removeItem('bingo_room_code')
-      sessionStorage.removeItem('bingo_room_slot')
+      localStorage.removeItem('bingo_room_code')
+      localStorage.removeItem('bingo_room_slot')
     }
   }, [subscribeToRoom])
 
@@ -508,8 +523,8 @@ export function useOnlineGame() {
     setError(null)
     setConnectedSlots(new Set())
     setIsSpectator(false)
-    sessionStorage.removeItem('bingo_room_code')
-    sessionStorage.removeItem('bingo_room_slot')
+    localStorage.removeItem('bingo_room_code')
+    localStorage.removeItem('bingo_room_slot')
   }, [cleanup])
 
   // Derived state — normalize snake_case DB columns to the hook's API

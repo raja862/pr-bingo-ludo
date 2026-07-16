@@ -64,7 +64,7 @@
   50% { opacity: 1; stroke-width: 4; }
 }
 
-/* ---- Dice ---- */
+/* ---- 3D Dice ---- */
 .ludo-dice-area {
   display: flex;
   flex-direction: column;
@@ -73,105 +73,145 @@
   margin-bottom: 18px;
 }
 
-.ludo-dice {
-  width: 80px;
-  height: 80px;
+.ludo-dice-3d {
+  --dice-size: 80px;
+  --dice-half: 40px;
+  width: var(--dice-size);
+  height: var(--dice-size);
+  perspective: 300px;
   position: relative;
-  perspective: 400px;
   cursor: default;
 }
 
-.ludo-dice-inner {
+.ludo-dice-cube {
   width: 100%;
   height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ludo-dice-face {
+  position: absolute;
+  width: var(--dice-size);
+  height: var(--dice-size);
   background: linear-gradient(145deg, #2a3268, #1e2550);
   border: 2px solid #4a5590;
   border-radius: 16px;
+  backface-visibility: hidden;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ludo-dice-face-dots {
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  padding: 12px;
+  padding: 14px;
   gap: 3px;
-  position: relative;
-  z-index: 2;
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.3),
-    0 8px 20px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ludo-dice-shadow {
+/* Face positions on the cube */
+.face-1 { transform: rotateY(0deg) translateZ(var(--dice-half)); }
+.face-6 { transform: rotateY(180deg) translateZ(var(--dice-half)); }
+.face-3 { transform: rotateY(90deg) translateZ(var(--dice-half)); }
+.face-4 { transform: rotateY(-90deg) translateZ(var(--dice-half)); }
+.face-2 { transform: rotateX(90deg) translateZ(var(--dice-half)); }
+.face-5 { transform: rotateX(-90deg) translateZ(var(--dice-half)); }
+
+/* Shadow under the dice */
+.ludo-dice-shadow-3d {
   position: absolute;
-  bottom: -4px;
-  left: 10%;
-  width: 80%;
-  height: 12px;
-  background: radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%);
+  bottom: -10px;
+  left: 5%;
+  width: 90%;
+  height: 18px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.45) 0%, transparent 70%);
   border-radius: 50%;
-  z-index: 1;
-  transition: all 0.15s ease;
+  transition: all 0.3s ease;
+  z-index: -1;
 }
 
-/* Rolling animation — shake + scale cycle */
-.ludo-dice.rolling .ludo-dice-inner {
-  animation: ludo-dice-roll 0.12s ease-in-out infinite alternate;
+/* Rolling — float up + tumble the cube */
+.ludo-dice-3d.rolling {
+  animation: dice-float 0.5s ease-in-out infinite alternate;
+}
+
+.ludo-dice-3d.rolling .ludo-dice-cube {
+  animation: dice-tumble 0.6s linear infinite;
+  transition: none;
+}
+
+.ludo-dice-3d.rolling .ludo-dice-face {
   border-color: var(--accent);
   box-shadow:
     0 4px 8px rgba(0, 0, 0, 0.3),
-    0 8px 20px rgba(0, 0, 0, 0.2),
-    0 0 20px rgba(255, 209, 102, 0.3);
+    0 0 16px rgba(255, 209, 102, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.ludo-dice.rolling .ludo-dice-shadow {
-  animation: ludo-shadow-roll 0.12s ease-in-out infinite alternate;
+.ludo-dice-3d.rolling .ludo-dice-shadow-3d {
+  opacity: 0.25;
+  transform: scale(0.5);
+  bottom: -20px;
 }
 
-@keyframes ludo-dice-roll {
-  0% { transform: rotate(-12deg) scale(1.05) translateY(-6px); }
-  100% { transform: rotate(12deg) scale(0.95) translateY(2px); }
+@keyframes dice-float {
+  0%   { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-35px) scale(1.06); }
 }
 
-@keyframes ludo-shadow-roll {
-  0% { opacity: 0.3; transform: scale(0.7); }
-  100% { opacity: 0.6; transform: scale(1.1); }
+@keyframes dice-tumble {
+  0%   { transform: rotateX(0deg)   rotateY(0deg)   rotateZ(0deg); }
+  25%  { transform: rotateX(90deg)  rotateY(180deg) rotateZ(45deg); }
+  50%  { transform: rotateX(180deg) rotateY(360deg) rotateZ(90deg); }
+  75%  { transform: rotateX(270deg) rotateY(540deg) rotateZ(135deg); }
+  100% { transform: rotateX(360deg) rotateY(720deg) rotateZ(180deg); }
 }
 
-/* Landed — bounce in */
-.ludo-dice.landed .ludo-dice-inner {
-  animation: ludo-dice-land 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* Landed — drop down with bounce */
+.ludo-dice-3d.landed {
+  animation: dice-drop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.ludo-dice.landed .ludo-dice-shadow {
-  animation: ludo-shadow-land 0.5s ease;
+.ludo-dice-3d.landed .ludo-dice-shadow-3d {
+  animation: dice-shadow-land 0.6s ease;
 }
 
-@keyframes ludo-dice-land {
-  0% { transform: scale(0.8) translateY(-20px) rotate(-15deg); }
-  40% { transform: scale(1.12) translateY(2px) rotate(3deg); }
-  60% { transform: scale(0.96) translateY(-2px) rotate(-1deg); }
-  80% { transform: scale(1.03) translateY(0) rotate(0deg); }
-  100% { transform: scale(1) translateY(0) rotate(0deg); }
+@keyframes dice-drop {
+  0%   { transform: translateY(-35px) scale(1.06); }
+  35%  { transform: translateY(5px) scale(1.1); }
+  55%  { transform: translateY(-6px) scale(0.96); }
+  70%  { transform: translateY(2px) scale(1.04); }
+  85%  { transform: translateY(-1px) scale(0.99); }
+  100% { transform: translateY(0) scale(1); }
 }
 
-@keyframes ludo-shadow-land {
-  0% { opacity: 0.1; transform: scale(0.4); }
-  40% { opacity: 0.7; transform: scale(1.2); }
-  100% { opacity: 0.5; transform: scale(1); }
+@keyframes dice-shadow-land {
+  0%   { opacity: 0.12; transform: scale(0.35); bottom: -20px; }
+  35%  { opacity: 0.6; transform: scale(1.25); bottom: -10px; }
+  55%  { opacity: 0.4; transform: scale(0.9); }
+  100% { opacity: 0.5; transform: scale(1); bottom: -10px; }
 }
 
-/* Rolled a 6 — golden glow */
-.ludo-dice.six .ludo-dice-inner {
+/* Rolled a 6 — golden glow on all visible faces */
+.ludo-dice-3d.six .ludo-dice-face {
   border-color: var(--accent);
   box-shadow:
     0 4px 8px rgba(0, 0, 0, 0.3),
     0 0 24px rgba(255, 209, 102, 0.5),
-    0 0 48px rgba(255, 209, 102, 0.2);
+    0 0 48px rgba(255, 209, 102, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.ludo-dice.six .ludo-dice-dot:not(.empty) {
+.ludo-dice-3d.six .ludo-dice-dot:not(.empty) {
   background: var(--accent);
-  box-shadow: 0 0 6px rgba(255, 209, 102, 0.6);
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.7);
 }
 
 /* Dots */
@@ -180,7 +220,7 @@
   height: 100%;
   border-radius: 50%;
   background: #e0e4ff;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: background 0.08s ease;
 }
 
@@ -562,14 +602,12 @@
     padding-top: 10px;
     padding-bottom: 20px;
   }
-  .ludo-dice {
-    width: 64px;
-    height: 64px;
+  .ludo-dice-3d {
+    --dice-size: 64px;
+    --dice-half: 32px;
   }
-  .ludo-dice-inner {
-    padding: 9px;
-    border-radius: 13px;
-  }
+  .ludo-dice-face { border-radius: 13px; }
+  .ludo-dice-face-dots { padding: 10px; }
   .ludo-roll-btn { padding: 8px 22px; font-size: 14px; }
   .ludo-dice-label { font-size: 12px; }
 
@@ -608,8 +646,9 @@
 }
 
 @media (max-width: 360px) {
-  .ludo-dice { width: 54px; height: 54px; }
-  .ludo-dice-inner { padding: 7px; border-radius: 11px; }
+  .ludo-dice-3d { --dice-size: 54px; --dice-half: 27px; }
+  .ludo-dice-face { border-radius: 11px; }
+  .ludo-dice-face-dots { padding: 7px; }
   .ludo-player-tab { padding: 3px 8px; font-size: 11px; }
   .ludo-win-title { font-size: 28px; }
   .ludo-win-text { font-size: 16px; }
@@ -625,7 +664,8 @@
   .ludo-board-wrap { max-width: 340px; }
   .ludo-player-tabs { margin-bottom: 6px; }
   .ludo-turn-status { margin-bottom: 6px; font-size: 12px; }
-  .ludo-dice { width: 48px; height: 48px; }
-  .ludo-dice-inner { padding: 6px; border-radius: 10px; }
+  .ludo-dice-3d { --dice-size: 48px; --dice-half: 24px; }
+  .ludo-dice-face { border-radius: 10px; }
+  .ludo-dice-face-dots { padding: 6px; }
   .ludo-dice-area { gap: 6px; margin-bottom: 8px; }
 }

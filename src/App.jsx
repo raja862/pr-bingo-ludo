@@ -280,13 +280,51 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const joinCode = params.get('join')
+    const joinGame = params.get('game')
     if (joinCode && joinCode.length === 6) {
       setJoinInput(joinCode.toUpperCase())
       setMode('online')
       setPhase('join-room')
+      if (joinGame === 'ludo') {
+        setGame('ludo')
+      } else {
+        setGame('bingo')
+      }
       window.history.replaceState({}, '', window.location.pathname)
+    } else {
+      // Auto-resume: detect saved game session from localStorage
+      try {
+        const ludoCode = localStorage.getItem('ludo_room_code')
+        const bingoCode = localStorage.getItem('bingo_room_code')
+        if (ludoCode) {
+          setGame('ludo')
+        } else if (bingoCode) {
+          setGame('bingo')
+        }
+      } catch {}
     }
   }, [])
+
+  // Auto-resume: when Bingo hook reconnects, transition UI to the correct phase
+  useEffect(() => {
+    if (game === 'bingo' && mode === null && online.roomCode && online.mySlot && online.roomData) {
+      setMode('online')
+      if (online.onlineStatus === 'playing') {
+        setPhase('playing')
+        setBoardAnimating(true)
+        setTimeout(() => setBoardAnimating(false), 800)
+      } else if (online.onlineStatus === 'waiting') {
+        setPhase('lobby')
+      }
+    }
+  }, [game, mode, online.roomCode, online.mySlot, online.roomData, online.onlineStatus])
+
+  // Restore player name from reconnected room data
+  useEffect(() => {
+    if (online.roomCode && online.mySlot && online.onlinePlayers[online.mySlot]?.name && !myName) {
+      setMyName(online.onlinePlayers[online.mySlot].name)
+    }
+  }, [online.roomCode, online.mySlot, online.onlinePlayers, myName])
 
   // Active state
   const isOnline = mode === 'online'
@@ -410,11 +448,23 @@ export default function App() {
       // Remove players who no longer qualify (undo support)
       let updated = prev.filter(r => (playerLineCounts[r.player] || 0) >= activeSize)
 
-      // Add new qualifiers
+      // Add new qualifiers — caller (current turn player) gets priority in ties
+      const newQualifiers = []
       for (let p = 1; p <= activePlayerCount; p++) {
         if ((playerLineCounts[p] || 0) >= activeSize && !updated.find(r => r.player === p)) {
-          updated = [...updated, { player: p, rank: updated.length + 1, lines: playerLineCounts[p] }]
+          newQualifiers.push(p)
         }
+      }
+      if (newQualifiers.length > 1) {
+        // Sort so the player who made the call (activeCurrentTurn) is ranked first
+        newQualifiers.sort((a, b) => {
+          if (a === activeCurrentTurn) return -1
+          if (b === activeCurrentTurn) return 1
+          return 0
+        })
+      }
+      for (const p of newQualifiers) {
+        updated = [...updated, { player: p, rank: updated.length + 1, lines: playerLineCounts[p] }]
       }
 
       // Auto-rank last remaining player
@@ -436,7 +486,7 @@ export default function App() {
       }
       return updated
     })
-  }, [playerLineCounts, activeSize, activePlayerCount, phase])
+  }, [playerLineCounts, activeSize, activePlayerCount, phase, activeCurrentTurn])
 
   // Rank banner + bingo sound when new players are ranked
   useEffect(() => {
