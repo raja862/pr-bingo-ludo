@@ -411,6 +411,9 @@ export function useLudoOnlineGame() {
         updateData.turn_deadline = new Date(Date.now() + timerVal * 1000).toISOString()
       }
 
+      // Optimistic local update so the UI reflects the roll instantly
+      setRoomData((prev) => (prev ? { ...prev, ...updateData } : prev))
+
       const supabase = getSupabase()
       const { error: err } = await supabase
         .from('rooms')
@@ -475,6 +478,9 @@ export function useLudoOnlineGame() {
         updateData.turn_deadline = new Date(Date.now() + timerVal * 1000).toISOString()
       }
 
+      // Optimistic local update so the move renders immediately
+      setRoomData((prev) => (prev ? { ...prev, ...updateData } : prev))
+
       const supabase = getSupabase()
       const { error: err } = await supabase
         .from('rooms')
@@ -513,6 +519,9 @@ export function useLudoOnlineGame() {
         current_turn: nextPlayer,
       }
       if (timerVal) updateData.turn_deadline = new Date(Date.now() + timerVal * 1000).toISOString()
+
+      // Optimistic local update so the turn passes immediately
+      setRoomData((prev) => (prev ? { ...prev, ...updateData } : prev))
 
       const supabase = getSupabase()
       const { error: err } = await supabase
