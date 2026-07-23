@@ -201,13 +201,10 @@ export function getValidMoves(state, player, diceValue) {
     if (pos === -1) {
       // In yard: can only come out on a 6
       if (diceValue === 6) {
-        // Check if start position is blocked by own token
+        // Own tokens may stack on a cell, so entering is always allowed on a 6
         const startPos = 0 // relative start for this player
-        const ownAtStart = playerPieces.some((p, i) => i !== tokenIdx && p === startPos)
-        if (!ownAtStart) {
-          const captureInfo = getCaptureInfo(state, player, startPos)
-          moves.push({ tokenIdx, from: -1, to: startPos, capture: captureInfo })
-        }
+        const captureInfo = getCaptureInfo(state, player, startPos)
+        moves.push({ tokenIdx, from: -1, to: startPos, capture: captureInfo })
       }
       continue
     }
@@ -224,21 +221,13 @@ export function getValidMoves(state, player, diceValue) {
       continue
     }
 
-    // Moving within home stretch (52-57)
+    // Moving within home stretch (52-57) — own tokens may share a cell
     if (newPos >= 52) {
-      // Check if another own token is on this home stretch position
-      const ownBlocking = playerPieces.some((p, i) => i !== tokenIdx && p === newPos)
-      if (!ownBlocking) {
-        moves.push({ tokenIdx, from: pos, to: newPos, capture: null })
-      }
+      moves.push({ tokenIdx, from: pos, to: newPos, capture: null })
       continue
     }
 
-    // Moving on main track (0-51)
-    // Check if blocked by own token at destination
-    const ownBlocking = playerPieces.some((p, i) => i !== tokenIdx && p === newPos)
-    if (ownBlocking) continue
-
+    // Moving on main track (0-51) — own tokens may stack on a cell
     const captureInfo = getCaptureInfo(state, player, newPos)
     moves.push({ tokenIdx, from: pos, to: newPos, capture: captureInfo })
   }

@@ -318,7 +318,7 @@ export default function LudoGame({ onBack }) {
       setDiceDisplay(diceVal)
       setDiceRolling(false)
       setDiceLanded(true)
-      setTimeout(() => setDiceLanded(false), 600)
+      setTimeout(() => setDiceLanded(false), 400)
 
       const moves = getValidMoves(
         { ...gameState, dice: diceVal },
@@ -343,13 +343,6 @@ export default function LudoGame({ onBack }) {
 
         setTimeout(() => {
           setAutoPassMsg(null)
-          let nextSixCount = gameState.sixCount
-          if (diceVal === 6) {
-            nextSixCount += 1
-          } else {
-            nextSixCount = 0
-          }
-
           const next = getNextPlayer(currentTurn, playerCount)
           setCurrentTurn(next)
           setGameState((prev) => ({
@@ -358,9 +351,9 @@ export default function LudoGame({ onBack }) {
             sixCount: 0,
             movePhase: 'rolling',
           }))
-        }, 1200)
+        }, 800)
       }
-    }, 800)
+    }, 500)
   }
 
   const handleTokenClick = (tokenIdx, directMove) => {
@@ -443,6 +436,24 @@ export default function LudoGame({ onBack }) {
       }
     }
   }
+
+  // Auto-move when there is exactly one legal move (e.g. only one coin out).
+  // Works for offline (any current player) and online (only on your own turn).
+  const autoMoveRef = useRef(false)
+  useEffect(() => {
+    if (!activeGameState || activeGameState.movePhase !== 'moving') {
+      autoMoveRef.current = false
+      return
+    }
+    if (winner || online.isSpectator || diceRolling) return
+    const iControlNow = isOnline ? isMyTurn : true
+    if (!iControlNow) return
+    if (validMoves.length === 1 && !autoMoveRef.current) {
+      autoMoveRef.current = true
+      const t = setTimeout(() => executeMove(validMoves[0]), 300)
+      return () => clearTimeout(t)
+    }
+  }, [activeGameState, validMoves, winner, isOnline, isMyTurn, diceRolling, online.isSpectator]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRematch = () => {
     hasRecorded.current = false
@@ -827,8 +838,11 @@ export default function LudoGame({ onBack }) {
 
   const diceValue = activeGameState.dice
   const movePhase = activeGameState.movePhase
-  const canRoll = movePhase === 'rolling' && !winner && (isOnline ? isMyTurn : currentTurn === myPlayer)
-  const canMove = movePhase === 'moving' && !winner && (isOnline ? isMyTurn : true)
+  // Offline is pass-and-play: whoever holds the device controls the current turn.
+  // Online: only control your own slot (and never as a spectator).
+  const iControl = !online.isSpectator && (isOnline ? isMyTurn : true)
+  const canRoll = movePhase === 'rolling' && !winner && iControl
+  const canMove = movePhase === 'moving' && !winner && iControl
 
   return (
     <div className="ludo-container ludo-playing">
@@ -895,9 +909,11 @@ export default function LudoGame({ onBack }) {
             <span className={`ludo-whose-turn p${activeCurrentTurn}`}>
               {online.isSpectator
                 ? `${playerNames[activeCurrentTurn] || PLAYER_LABELS[activeCurrentTurn]}'s turn`
-                : isMyTurn
-                  ? `Your turn — ${movePhase === 'rolling' ? 'roll the dice' : 'select a token'}`
-                  : `${playerNames[activeCurrentTurn] || PLAYER_LABELS[activeCurrentTurn]}'s turn`}
+                : isOnline
+                  ? isMyTurn
+                    ? `Your turn — ${movePhase === 'rolling' ? 'roll the dice' : 'select a token'}`
+                    : `${playerNames[activeCurrentTurn] || PLAYER_LABELS[activeCurrentTurn]}'s turn`
+                  : `${playerNames[activeCurrentTurn] || PLAYER_LABELS[activeCurrentTurn]}'s turn — ${movePhase === 'rolling' ? 'roll the dice' : 'select a token'}`}
             </span>
             {isOnline && online.timerEnabled && secondsLeft != null && (
               <span className={`timer ${secondsLeft <= 5 ? 'urgent' : ''}`}>

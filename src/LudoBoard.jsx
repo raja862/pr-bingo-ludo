@@ -7,6 +7,14 @@ import {
 
 const CELL_SIZE = 40
 
+// Glossy token gradient stops per player: [highlight, base, shadow]
+const TOKEN_GRADS = {
+  1: ['#7dffc7', '#16c784', '#0b6e48'],
+  2: ['#ffedb0', '#ffd166', '#c9931f'],
+  3: ['#a7c6ff', '#4d8bff', '#2456c4'],
+  4: ['#ffa3b4', '#ff4d6d', '#c72e49'],
+}
+
 // Yard background rectangles (6x6 area in each corner)
 const YARD_RECTS = {
   1: { x: 0, y: 360, w: 240, h: 240 },   // Green: bottom-left
@@ -111,8 +119,48 @@ export default function LudoBoard({
 
   return (
     <svg viewBox="0 0 600 600" className="ludo-board-svg">
+      <defs>
+        {/* Board backdrop */}
+        <linearGradient id="boardBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#1c2247" />
+          <stop offset="50%" stopColor="#161b38" />
+          <stop offset="100%" stopColor="#10142c" />
+        </linearGradient>
+        <radialGradient id="boardGlow" cx="50%" cy="42%" r="60%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        {/* Glossy per-player token gradients */}
+        {[1, 2, 3, 4].map((p) => {
+          const [hi, base, lo] = TOKEN_GRADS[p]
+          return (
+            <radialGradient key={`tg-${p}`} id={`tokGrad-${p}`} cx="36%" cy="30%" r="75%">
+              <stop offset="0%" stopColor={hi} />
+              <stop offset="48%" stopColor={base} />
+              <stop offset="100%" stopColor={lo} />
+            </radialGradient>
+          )
+        })}
+        {/* Center hub sheen */}
+        <radialGradient id="centerGlow" cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        {/* Soft drop shadow for tokens */}
+        <filter id="tokShadow" x="-60%" y="-60%" width="220%" height="220%">
+          <feDropShadow dx="0" dy="2.5" stdDeviation="2.2" floodColor="#05070f" floodOpacity="0.55" />
+        </filter>
+        {/* Glow for active safe/star cells */}
+        <filter id="cellSoft" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+      </defs>
+
       {/* Background */}
-      <rect x="0" y="0" width="600" height="600" rx="16" fill="var(--bg-2)" />
+      <rect x="0" y="0" width="600" height="600" rx="20" fill="url(#boardBg)" />
+      <rect x="0" y="0" width="600" height="600" rx="20" fill="url(#boardGlow)" />
+      <rect x="1" y="1" width="598" height="598" rx="19" fill="none"
+        stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" />
 
       {/* Yard backgrounds */}
       {activePlayers.map((p) => {
@@ -209,6 +257,7 @@ export default function LudoBoard({
           />
         )
       })}
+      <circle cx="300" cy="300" r="24" fill="url(#centerGlow)" style={{ pointerEvents: 'none' }} />
 
       {/* Valid move destination highlights */}
       {selectedToken != null && validMoves
@@ -227,41 +276,57 @@ export default function LudoBoard({
             coords = toSvgXY(tc.row, tc.col)
           }
           return (
-            <circle key={`dest-${m.tokenIdx}-${m.to}`}
-              cx={coords.x} cy={coords.y} r="16"
-              fill="none" stroke={PLAYER_COLORS[currentTurn]}
-              strokeWidth="3" className="ludo-valid-dest"
+            <g key={`dest-${m.tokenIdx}-${m.to}`}
               onClick={() => onTokenClick(m.tokenIdx, m)}
-              style={{ cursor: 'pointer' }}
-            />
+              style={{ cursor: 'pointer' }}>
+              {/* enlarged transparent tap target for touch */}
+              <circle cx={coords.x} cy={coords.y} r="22" fill="transparent" />
+              <circle cx={coords.x} cy={coords.y} r="16"
+                fill="none" stroke={PLAYER_COLORS[currentTurn]}
+                strokeWidth="3" className="ludo-valid-dest" />
+            </g>
           )
         })
       }
 
-      {/* Token circles */}
-      {tokenElements.map((t) => (
-        <g key={t.key}
-          className={`ludo-token-group ${t.isMovable ? 'movable' : ''} ${t.isSelected ? 'selected' : ''}`}
-          onClick={t.isMovable ? () => onTokenClick(t.tokenIdx) : undefined}
-          style={t.isMovable ? { cursor: 'pointer' } : undefined}
-        >
-          <circle
-            cx={t.x} cy={t.y} r={t.isSelected ? 14 : 12}
-            fill={PLAYER_COLORS[t.player]}
-            stroke={t.isSelected ? '#fff' : 'rgba(0,0,0,0.3)'}
-            strokeWidth={t.isSelected ? 3 : 2}
-            className={`ludo-token ${t.isMovable ? 'ludo-token-movable' : ''} ${t.isSelected ? 'ludo-token-selected' : ''}`}
-          />
-          {t.isMovable && !t.isSelected && (
-            <circle cx={t.x} cy={t.y} r="15"
-              fill="none" stroke={PLAYER_COLORS[t.player]}
-              strokeWidth="2" className="ludo-token-pulse"
+      {/* Token circles — glossy 3D beads */}
+      {tokenElements.map((t) => {
+        const r = t.isSelected ? 13.5 : 12
+        return (
+          <g key={t.key}
+            className={`ludo-token-group ${t.isMovable ? 'movable' : ''} ${t.isSelected ? 'selected' : ''}`}
+            onClick={t.isMovable ? () => onTokenClick(t.tokenIdx) : undefined}
+            style={t.isMovable ? { cursor: 'pointer' } : undefined}
+          >
+            {/* enlarged transparent tap target for touch */}
+            {t.isMovable && (
+              <circle cx={t.x} cy={t.y} r="22" fill="transparent" />
+            )}
+            {/* pulse ring under movable tokens */}
+            {t.isMovable && !t.isSelected && (
+              <circle cx={t.x} cy={t.y} r="15"
+                fill="none" stroke={PLAYER_COLORS[t.player]}
+                strokeWidth="2" className="ludo-token-pulse"
+              />
+            )}
+            {/* glossy body */}
+            <circle
+              cx={t.x} cy={t.y} r={r}
+              fill={`url(#tokGrad-${t.player})`}
+              stroke={t.isSelected ? '#ffffff' : 'rgba(0,0,0,0.35)'}
+              strokeWidth={t.isSelected ? 2.5 : 1.5}
+              filter="url(#tokShadow)"
+              className={`ludo-token ${t.isMovable ? 'ludo-token-movable' : ''} ${t.isSelected ? 'ludo-token-selected' : ''}`}
             />
-          )}
-          <circle cx={t.x} cy={t.y} r="5"
-            fill="rgba(255,255,255,0.4)" />
-        </g>
-      ))}
+            {/* inner rim light */}
+            <circle cx={t.x} cy={t.y} r={r - 0.8}
+              fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+            {/* specular highlight */}
+            <ellipse cx={t.x - r * 0.28} cy={t.y - r * 0.36} rx={r * 0.42} ry={r * 0.3}
+              fill="rgba(255,255,255,0.6)" className="ludo-token-gloss" />
+          </g>
+        )
+      })}
     </svg>
   )
 }
