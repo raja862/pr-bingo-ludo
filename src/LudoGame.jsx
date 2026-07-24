@@ -61,8 +61,6 @@ export default function LudoGame({ onBack }) {
   const [diceLanded, setDiceLanded] = useState(false)
   const rollIntervalRef = useRef(null)
   const [autoPassMsg, setAutoPassMsg] = useState(null)
-  const [showMoveLog, setShowMoveLog] = useState(false)
-  const [moveLog, setMoveLog] = useState([])
   const [extraTurnMsg, setExtraTurnMsg] = useState(null)
 
   // Timer for online
@@ -150,11 +148,6 @@ export default function LudoGame({ onBack }) {
     return counts
   }, [activeGameState?.pieces])
 
-  // Active move log
-  const activeMoveLog = isOnline
-    ? (online.gameState?.moveLog || [])
-    : moveLog
-
   // Turn timer for online
   const secondsLeft = useTurnTimer(
     isOnline && online.timerEnabled ? online.turnDeadline : null,
@@ -223,6 +216,20 @@ export default function LudoGame({ onBack }) {
     }
   }, [extraTurnMsg])
 
+  // Online: surface "extra turn" messages from the shared move log (offline sets these directly)
+  const lastLogLenRef = useRef(0)
+  useEffect(() => {
+    if (!isOnline) return
+    const log = online.gameState?.moveLog
+    if (!log) { lastLogLenRef.current = 0; return }
+    if (log.length <= lastLogLenRef.current) { lastLogLenRef.current = log.length; return }
+    lastLogLenRef.current = log.length
+    const last = log[log.length - 1]
+    if (last && last.extraTurn) {
+      setExtraTurnMsg(last.capture ? 'Capture! Extra turn!' : 'Rolled 6! Extra turn!')
+    }
+  }, [isOnline, online.gameState?.moveLog])
+
   // Warn before leaving
   const isInGame = phase === 'playing' || phase === 'lobby'
   useEffect(() => {
@@ -257,8 +264,6 @@ export default function LudoGame({ onBack }) {
     setChatOpen(false)
     setTimerEnabled(false)
     setTimerSeconds(30)
-    setShowMoveLog(false)
-    setMoveLog([])
     setSelectedToken(null)
     setExtraTurnMsg(null)
     setAutoPassMsg(null)
@@ -270,13 +275,13 @@ export default function LudoGame({ onBack }) {
     setGameState(state)
     setCurrentTurn(active[0])
     hasRecorded.current = false
-    setMoveLog([])
     setSelectedToken(null)
     setPhase('playing')
   }
 
   const handleRollDice = () => {
     if (winner) return
+    if (diceRolling || autoPassMsg) return // block re-entry during roll / auto-pass window
     if (!isMyTurn && isOnline) return
 
     if (isOnline) {
@@ -291,6 +296,8 @@ export default function LudoGame({ onBack }) {
         if (count > 8) {
           clearInterval(rollIntervalRef.current)
           setDiceRolling(false)
+          setDiceLanded(true)
+          setTimeout(() => setDiceLanded(false), 400)
         }
       }, 80)
       online.rollDice()
@@ -320,7 +327,9 @@ export default function LudoGame({ onBack }) {
       setDiceLanded(true)
       setTimeout(() => setDiceLanded(false), 400)
 
-      const moves = getValidMoves(
+      // Third consecutive six forfeits the turn without moving
+      const isThirdSix = diceVal === 6 && (gameState.sixCount || 0) >= 2
+      const moves = isThirdSix ? [] : getValidMoves(
         { ...gameState, dice: diceVal },
         currentTurn,
         diceVal,
@@ -334,12 +343,7 @@ export default function LudoGame({ onBack }) {
       setSelectedToken(null)
 
       if (moves.length === 0) {
-        setAutoPassMsg(`No valid moves with ${diceVal}`)
-        setMoveLog((prev) => [...prev.slice(-29), {
-          player: currentTurn,
-          action: 'no-move',
-          dice: diceVal,
-        }])
+        setAutoPassMsg(isThirdSix ? 'Three 6s — turn forfeited!' : `No valid moves with ${diceVal}`)
 
         setTimeout(() => {
           setAutoPassMsg(null)
@@ -406,14 +410,6 @@ export default function LudoGame({ onBack }) {
     }
 
     const result = applyMove(gameState, currentTurn, move, playerCount)
-
-    setMoveLog((prev) => [...prev.slice(-29), {
-      player: currentTurn,
-      action: move.from === -1 ? 'enter' : move.to === 58 ? 'home' : 'move',
-      dice: gameState.dice,
-      capture: result.captured,
-      extraTurn: result.extraTurn,
-    }])
 
     setGameState({
       pieces: result.pieces,
@@ -559,18 +555,6 @@ export default function LudoGame({ onBack }) {
         <div className="ludo-dice-shadow-3d" />
       </div>
     )
-  }
-
-  // Format move log entry
-  const formatLogEntry = (entry) => {
-    const name = playerNames[entry.player] || PLAYER_LABELS[entry.player]
-    if (entry.action === 'no-move') return `${name} rolled ${entry.dice} — no moves`
-    if (entry.action === 'enter') return `${name} rolled ${entry.dice} — entered track${entry.capture ? ' + capture!' : ''}`
-    if (entry.action === 'home') return `${name} rolled ${entry.dice} — reached home!`
-    let text = `${name} rolled ${entry.dice} — moved`
-    if (entry.capture) text += ' + capture!'
-    if (entry.extraTurn) text += ' (extra turn)'
-    return text
   }
 
   // ---- RENDER ----
@@ -881,9 +865,6 @@ export default function LudoGame({ onBack }) {
         <button className="mute-btn" onClick={toggleMute} title={muted ? 'Unmute' : 'Mute'}>
           {muted ? '\u{1F507}' : '\u{1F50A}'}
         </button>
-        <button className="mute-btn" onClick={() => setShowMoveLog((v) => !v)} title="Move log">
-          {'\u{1F4CB}'}
-        </button>
       </div>
 
       {/* Player tabs */}
@@ -931,7 +912,7 @@ export default function LudoGame({ onBack }) {
       <div className="ludo-dice-area">
         {diceValue ? renderDice(diceValue) : renderDice(1)}
         {canRoll && (
-          <button className="ludo-roll-btn" onClick={handleRollDice} disabled={diceRolling}>
+          <button className="ludo-roll-btn" onClick={handleRollDice} disabled={diceRolling || !!autoPassMsg}>
             {diceRolling ? 'Rolling...' : 'Roll Dice'}
           </button>
         )}
@@ -956,24 +937,6 @@ export default function LudoGame({ onBack }) {
         />
       </div>
 
-      {/* Move log */}
-      {showMoveLog && (
-        <div className="ludo-move-log">
-          <div className="ludo-move-log-header">
-            <span>Move Log</span>
-            <button className="ludo-move-log-close" onClick={() => setShowMoveLog(false)}>&times;</button>
-          </div>
-          <div className="ludo-move-log-list">
-            {activeMoveLog.length === 0 && <p className="ludo-move-log-empty">No moves yet</p>}
-            {activeMoveLog.map((entry, i) => (
-              <div key={i} className="ludo-move-log-item">
-                <span className={`ludo-move-log-dot p${entry.player}`} style={{ background: PLAYER_COLORS[entry.player] }} />
-                <span className="ludo-move-log-text">{formatLogEntry(entry)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Win overlay */}
       {winner && (
