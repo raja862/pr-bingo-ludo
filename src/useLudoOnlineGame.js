@@ -363,7 +363,9 @@ export function useLudoOnlineGame() {
     try {
       const diceVal = rollDice()
       const playerCount = gameState.__playerCount
-      const validMovesList = getValidMoves(
+      // Third consecutive six forfeits the turn without moving
+      const isThirdSix = diceVal === 6 && (gameState.sixCount || 0) >= 2
+      const validMovesList = isThirdSix ? [] : getValidMoves(
         { pieces: gameState.pieces, dice: diceVal },
         mySlot,
         diceVal,
@@ -377,16 +379,8 @@ export function useLudoOnlineGame() {
 
       const newMoveLog = [...(gameState.moveLog || []).slice(-29)]
 
-      // If no valid moves, auto-pass
+      // If no valid moves (or third six), auto-pass to the next player
       if (validMovesList.length === 0) {
-        // Handle 3 consecutive sixes
-        let nextSixCount = gameState.sixCount
-        if (diceVal === 6) {
-          nextSixCount += 1
-        } else {
-          nextSixCount = 0
-        }
-
         const nextPlayer = getNextPlayer(mySlot, playerCount)
         newGameState.currentPlayer = nextPlayer
         newGameState.sixCount = 0
@@ -395,7 +389,7 @@ export function useLudoOnlineGame() {
 
         newMoveLog.push({
           player: mySlot,
-          action: 'no-move',
+          action: isThirdSix ? 'forfeit' : 'no-move',
           dice: diceVal,
         })
       }

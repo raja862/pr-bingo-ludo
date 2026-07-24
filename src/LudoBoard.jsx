@@ -150,10 +150,6 @@ export default function LudoBoard({
         <filter id="tokShadow" x="-60%" y="-60%" width="220%" height="220%">
           <feDropShadow dx="0" dy="2.5" stdDeviation="2.2" floodColor="#05070f" floodOpacity="0.55" />
         </filter>
-        {/* Glow for active safe/star cells */}
-        <filter id="cellSoft" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
-        </filter>
       </defs>
 
       {/* Background */}
