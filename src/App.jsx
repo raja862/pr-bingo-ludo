@@ -6,6 +6,8 @@ import { useStats } from './useStats'
 import { useChat } from './useChat'
 import { useTurnTimer } from './useTurnTimer'
 import LudoGame from './LudoGame'
+import TicTacToeGame from './TicTacToeGame'
+import RatashooterGame from './RatashooterGame'
 
 const THEMES = [
   { name: 'Default', bg: '#0f1226', bg2: '#1a1f3d', cell: '#232a52', mode: 'dark' },
@@ -287,6 +289,8 @@ export default function App() {
       setPhase('join-room')
       if (joinGame === 'ludo') {
         setGame('ludo')
+      } else if (joinGame === 'tictactoe') {
+        setGame('tictactoe')
       } else {
         setGame('bingo')
       }
@@ -295,9 +299,12 @@ export default function App() {
       // Auto-resume: detect saved game session from localStorage
       try {
         const ludoCode = localStorage.getItem('ludo_room_code')
+        const tttCode = localStorage.getItem('ttt_room_code')
         const bingoCode = localStorage.getItem('bingo_room_code')
         if (ludoCode) {
           setGame('ludo')
+        } else if (tttCode) {
+          setGame('tictactoe')
         } else if (bingoCode) {
           setGame('bingo')
         }
@@ -783,7 +790,7 @@ export default function App() {
         <div className="setup">
           <div className="game-select-grid">
             <button className="game-select-card bingo" onClick={() => setGame('bingo')}>
-              <span className="game-select-icon">{'\u{1F3B2}'}</span>
+              <span className="game-select-icon">{'\u{1F3B0}'}</span>
               <span className="game-select-name">Bingo</span>
               <span className="game-select-desc">Classic number calling board game</span>
             </button>
@@ -791,6 +798,16 @@ export default function App() {
               <span className="game-select-icon">{'\u{1F3B2}'}</span>
               <span className="game-select-name">Ludo</span>
               <span className="game-select-desc">Race your tokens around the board</span>
+            </button>
+            <button className="game-select-card tictactoe" onClick={() => setGame('tictactoe')}>
+              <span className="game-select-icon">{'\u{2B55}'}</span>
+              <span className="game-select-name">Tic-Tac-Toe</span>
+              <span className="game-select-desc">Get three in a row to win</span>
+            </button>
+            <button className="game-select-card ratashooter" onClick={() => setGame('ratashooter')}>
+              <span className="game-select-icon">{'\u{1F400}'}</span>
+              <span className="game-select-name">Ratashooter</span>
+              <span className="game-select-desc">Type words to zap the rats</span>
             </button>
           </div>
         </div>
@@ -801,6 +818,16 @@ export default function App() {
   // ---------- Ludo game ----------
   if (game === 'ludo') {
     return <LudoGame onBack={() => setGame(null)} />
+  }
+
+  // ---------- Tic-Tac-Toe game ----------
+  if (game === 'tictactoe') {
+    return <TicTacToeGame onBack={() => setGame(null)} />
+  }
+
+  // ---------- Ratashooter game ----------
+  if (game === 'ratashooter') {
+    return <RatashooterGame onBack={() => setGame(null)} />
   }
 
   // ---------- Mode selection ----------
