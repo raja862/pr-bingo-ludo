@@ -547,6 +547,12 @@
 .game-select-card.ludo:hover {
   border-color: #16c784;
 }
+.game-select-card.tictactoe:hover {
+  border-color: #4d8bff;
+}
+.game-select-card.ratashooter:hover {
+  border-color: #ff9e40;
+}
 
 .game-select-icon {
   font-size: 48px;
